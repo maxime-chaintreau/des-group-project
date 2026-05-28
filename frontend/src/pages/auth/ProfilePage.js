@@ -15,6 +15,8 @@ import {
 
 export default function ProfilePage({ user }) {
   const role = user.role;
+  const date = new Date(user.createdAt);
+  const formattedDate = `${String(date.getDate()).padStart(2, "0")}/` + `${String(date.getMonth() + 1).padStart(2, "0")}/` + `${date.getFullYear()}`;
   const [editing, setEditing] = useState(false);
 
   const [email, setEmail] = useState(user.email || "");
@@ -94,7 +96,6 @@ export default function ProfilePage({ user }) {
       setCompanyDescription(tempCompanyDescription);
 
       setEditing(false);
-      alert("Profile updated successfully!");
     } catch (error) {
       alert("Error: " + error.message);
     }
@@ -106,6 +107,9 @@ export default function ProfilePage({ user }) {
         <h1>Profile</h1>
         <p>
           <strong>Email:</strong> {email}
+        </p>
+        <p>
+          <strong>Date Registration:</strong> {formattedDate}
         </p>
         {role === "freelancer" ? (
           <>
