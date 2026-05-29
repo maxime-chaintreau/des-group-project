@@ -56,6 +56,7 @@ export default function Header({ user, setUser, setLoggedIn }) {
           </Link>
         </div>
       </div>
+      <p>{user?.email}</p>
 
       <div className="user-wrapper" ref={dropdownRef}>
         {user && <img ref={chatButtonRef} src="https://www.svgrepo.com/show/485668/chat.svg" alt="chat_icon" className="header_icon" onClick={() => setChatOpen((prev) => !prev)} />}
@@ -77,6 +78,11 @@ export default function Header({ user, setUser, setLoggedIn }) {
                 <Link to="/profile" className="dropdown-item">
                   Profile
                 </Link>
+                {user.role === "employer" && (
+                  <Link to="/payments" className="dropdown-item">
+                    Payments
+                  </Link>
+                )}
                 <a className="dropdown-item" onClick={handleLogout}>
                   Logout
                 </a>

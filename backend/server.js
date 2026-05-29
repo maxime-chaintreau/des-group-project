@@ -4,24 +4,11 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 require("dotenv").config({ quiet: true });
 
+const allowedOrigin = "http://localhost:3000";
+
 const app = express();
 app.use(express.json());
-
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : ["http://localhost:3000"];
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  }),
-);
-
+app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(cookieParser());
 
 const server = createServer(app);

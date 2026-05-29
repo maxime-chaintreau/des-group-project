@@ -66,7 +66,6 @@ export default function CreateJobPage({ user }) {
         return;
       }
 
-      alert("Job created!");
       navigate(`/job?jobId=${data.job.id}`);
     } catch (error) {
       console.error(error);

@@ -146,4 +146,21 @@ router.delete("/:applicationId", async (req, res) => {
   }
 });
 
+router.get("/:applicationId/jobTitle", async (req, res) => {
+  const applicationId = req.params.applicationId;
+
+  if (!applicationId) {
+    return res.status(400).json({ error: "All information required" });
+  }
+
+  try {
+    const app = await db.one("SELECT j.title FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = $1", [applicationId]);
+
+    res.status(200).json({ message: "Job title fetched successfuly", jobTitle: app.title });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to get the JobTitle" });
+  }
+});
+
 module.exports = router;

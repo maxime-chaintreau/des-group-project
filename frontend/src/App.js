@@ -17,6 +17,7 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import ProfilePage from "./pages/auth/ProfilePage";
 import JobPage from "./pages/jobs/JobPage";
 import CreateJobPage from "./pages/jobs/CreateJobPage";
+import PaymentsPage from "./pages/PaymentsPage";
 import HomePage from "./pages/HomePage";
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_KEY);
@@ -68,6 +69,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={loggedIn ? <Navigate to="/" /> : <LoginPage setLoggedIn={setLoggedIn} setUser={setUser} />} />
             <Route path="/register" element={loggedIn ? <Navigate to="/" /> : <RegisterPage setLoggedIn={setLoggedIn} setUser={setUser} />} />
+            <Route path="/payments" element={!loggedIn ? <Navigate to="/" /> : <PaymentsPage user={user} />} />
             <Route path="/profile" element={!loggedIn ? <Navigate to="/" /> : <ProfilePage user={user} />} />
             <Route path="/job" element={<JobPage user={user} />} />
             <Route path="/create-job" element={loggedIn ? <CreateJobPage user={user} /> : <Navigate to="/login" />} />
