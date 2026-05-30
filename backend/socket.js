@@ -3,9 +3,7 @@ const jwt = require("jsonwebtoken");
 const db = require("./db");
 
 module.exports = function initSockets(server, app) {
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",")
-    : ["http://localhost:3000"];
+  const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : ["http://localhost:3000"];
 
   const io = new Server(server, {
     cors: { origin: allowedOrigins, credentials: true },
@@ -17,10 +15,15 @@ module.exports = function initSockets(server, app) {
 
   io.on("connection", (socket) => {
     // Read token from Authorization header (sent by socket.io client)
-    const authHeader = socket.handshake.headers["authorization"] || socket.handshake.auth?.token;
+    const authHeader = socket.handshake.auth?.token || socket.handshake.headers["authorization"];
     const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
 
-    if (!token) return socket.disconnect();
+    console.log("Socket auth token received:", token ? "YES (length: " + token.length + ")" : "NO TOKEN");
+
+    if (!token) {
+      console.log("No token - disconnecting");
+      return socket.disconnect();
+    }
 
     let user;
     try {
@@ -36,10 +39,11 @@ module.exports = function initSockets(server, app) {
 
     socket.on("message:send", async ({ recipientId, content }) => {
       try {
-        const msg = await db.one(
-          "INSERT INTO messages(sender_id, recipient_id, content) VALUES ($1,$2,$3) RETURNING id, sender_id, recipient_id, content, timestamp",
-          [socket.userId, recipientId, content]
-        );
+        const msg = await db.one("INSERT INTO messages(sender_id, recipient_id, content) VALUES ($1,$2,$3) RETURNING id, sender_id, recipient_id, content, timestamp", [
+          socket.userId,
+          recipientId,
+          content,
+        ]);
 
         const sockets = userSockets.get(recipientId);
         if (sockets) sockets.forEach((socketId) => io.to(socketId).emit("message:receive", msg));
