@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { socket } from "../socket";
+import { getSocket } from "../socket";
 import "./ChatPopup.css";
 import { authHeaders } from "../api/auth";
 import { MAX_CHAT_EMAIL_LENGTH, MAX_MESSAGE_LENGTH, sanitize, validateLength } from "../utils/validation";
@@ -16,9 +16,7 @@ export default function ChatPopup({ user }) {
   useEffect(() => {
     async function getConversations() {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/messages/conversations`, {
-          headers: authHeaders(),
-        });
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/messages/conversations`, { headers: authHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to fetch conversations");
         setConversations(data.conversations);
@@ -33,6 +31,9 @@ export default function ChatPopup({ user }) {
 
     getConversations();
 
+    const socket = getSocket();
+    if (!socket) return;
+
     const handleMessage = (msg) => {
       const otherUserId = msg.sender_id === user.id ? msg.recipient_id : msg.sender_id;
       setSelectedUserId((prevSelected) => {
@@ -42,18 +43,20 @@ export default function ChatPopup({ user }) {
           return prev;
         });
         setConversations((prev) =>
-          prev.map((a) => {
-            if (a.user_id === otherUserId) {
-              return {
-                ...a,
-                last_message_content: msg.content,
-                last_message_sender_id: msg.sender_id,
-                last_message_time: Date.now(),
-                unread_count: !prevSelected || prevSelected === otherUserId ? 0 : (Number(a.unread_count) || 0) + 1,
-              };
-            }
-            return a;
-          }).sort((a, b) => (b.last_message_time || 0) - (a.last_message_time || 0))
+          prev
+            .map((a) => {
+              if (a.user_id === otherUserId) {
+                return {
+                  ...a,
+                  last_message_content: msg.content,
+                  last_message_sender_id: msg.sender_id,
+                  last_message_time: Date.now(),
+                  unread_count: !prevSelected || prevSelected === otherUserId ? 0 : (Number(a.unread_count) || 0) + 1,
+                };
+              }
+              return a;
+            })
+            .sort((a, b) => (b.last_message_time || 0) - (a.last_message_time || 0)),
         );
         return newSelected;
       });
@@ -67,9 +70,7 @@ export default function ChatPopup({ user }) {
     if (!selectedUserId) return;
     async function getMessages() {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/messages/${selectedUserId}`, {
-          headers: authHeaders(),
-        });
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/messages/${selectedUserId}`, { headers: authHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed");
         setMessages(data.messages);
@@ -82,9 +83,18 @@ export default function ChatPopup({ user }) {
   }, [selectedUserId]);
 
   useEffect(() => {
-    if (!newChatEmail) { setSuggestions([]); return; }
-    if (!validateLength(newChatEmail, MAX_CHAT_EMAIL_LENGTH)) { setSuggestions([]); return; }
-    if (conversations.some((c) => c.user_email === newChatEmail.toLowerCase())) { setSuggestions([]); return; }
+    if (!newChatEmail) {
+      setSuggestions([]);
+      return;
+    }
+    if (!validateLength(newChatEmail, MAX_CHAT_EMAIL_LENGTH)) {
+      setSuggestions([]);
+      return;
+    }
+    if (conversations.some((c) => c.user_email === newChatEmail.toLowerCase())) {
+      setSuggestions([]);
+      return;
+    }
     const safeInput = sanitize(newChatEmail.toLowerCase());
     const filtered = conversations.map((c) => c.user_email).filter((email) => email.includes(safeInput) && email !== user.email);
     setSuggestions(filtered);
@@ -97,17 +107,18 @@ export default function ChatPopup({ user }) {
   function sendMessage(e) {
     e.preventDefault();
     if (newMessage.trim() === "") return;
-    if (!validateLength(newMessage, MAX_MESSAGE_LENGTH)) { alert(`Message too long (max ${MAX_MESSAGE_LENGTH})`); return; }
+    if (!validateLength(newMessage, MAX_MESSAGE_LENGTH)) {
+      alert(`Message too long (max ${MAX_MESSAGE_LENGTH})`);
+      return;
+    }
     const safe = sanitize(newMessage.trim());
-    socket.emit("message:send", { recipientId: selectedUserId, content: safe });
+    const socket = getSocket();
+    socket?.emit("message:send", { recipientId: selectedUserId, content: safe });
     setNewMessage("");
   }
 
   async function readAll() {
-    await fetch(`${process.env.REACT_APP_API_URL}/messages/readAll`, {
-      method: "PUT",
-      headers: authHeaders(),
-    });
+    await fetch(`${process.env.REACT_APP_API_URL}/messages/readAll`, { method: "PUT", headers: authHeaders() });
     setConversations((prev) => prev.map((a) => ({ ...a, unread_count: 0 })));
   }
 
@@ -137,12 +148,32 @@ export default function ChatPopup({ user }) {
             <div className="new-chat-input-wrapper">
               <input type="text" placeholder="New chat" value={newChatEmail} onChange={(e) => setNewChatEmail(e.target.value)} maxLength={MAX_CHAT_EMAIL_LENGTH} />
               {newChatEmail && (
-                <button type="button" className="clear-input-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setNewChatEmail(""); }}>×</button>
+                <button
+                  type="button"
+                  className="clear-input-btn"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setNewChatEmail("");
+                  }}
+                >
+                  ×
+                </button>
               )}
               {suggestions.length > 0 && (
                 <ul className="chat-suggestion-list">
                   {suggestions.map((email) => (
-                    <li key={email} className="chat-suggestion-item" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); createNewChat(e, email); }}>{email}</li>
+                    <li
+                      key={email}
+                      className="chat-suggestion-item"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        createNewChat(e, email);
+                      }}
+                    >
+                      {email}
+                    </li>
                   ))}
                 </ul>
               )}
@@ -158,7 +189,10 @@ export default function ChatPopup({ user }) {
           return (
             <div key={c.user_id} onClick={() => setSelectedUserId(c.user_id)} className={"chat-suggestion-item" + (isSel ? " selected" : "")}>
               <p>{c.user_email}</p>
-              <p>{c.last_message_sender_id ? (c.last_message_sender_id === c.user_id ? "Them: " : "You: ") : ""}{c.last_message_content}</p>
+              <p>
+                {c.last_message_sender_id ? (c.last_message_sender_id === c.user_id ? "Them: " : "You: ") : ""}
+                {c.last_message_content}
+              </p>
               {c.unread_count > 0 && <span className="unread-badge">{c.unread_count}</span>}
             </div>
           );
@@ -167,7 +201,9 @@ export default function ChatPopup({ user }) {
       <div className="chat-main">
         <div className="chat-messages">
           {messages.map((m) => (
-            <div key={m.id} className={"chat-message " + (m.sender_id === user.id ? "self" : "other")}>{m.content}</div>
+            <div key={m.id} className={"chat-message " + (m.sender_id === user.id ? "self" : "other")}>
+              {m.content}
+            </div>
           ))}
           <div ref={messagesEndRef} />
         </div>
