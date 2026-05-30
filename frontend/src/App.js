@@ -6,8 +6,7 @@ import "./layout.css";
 import "./App.css";
 
 import { connectSocket } from "./socket";
-
-import { getUser } from "./api/getUser";
+import { getToken, clearToken } from "./api/auth";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -29,8 +28,8 @@ function App() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const hasToken = localStorage.getItem("hasToken") === "true";
-      if (!hasToken) {
+      const token = getToken();
+      if (!token) {
         setUser(null);
         setLoggedIn(false);
         setLoading(false);
@@ -38,15 +37,17 @@ function App() {
       }
 
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/auth/isTokenValid`, { credentials: "include" });
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/auth/isTokenValid`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to verify token");
 
-        const userData = await getUser();
-        setUser(userData);
+        setUser(data.user);
         setLoggedIn(true);
         connectSocket();
       } catch (error) {
+        clearToken();
         setUser(null);
         setLoggedIn(false);
       } finally {

@@ -1,8 +1,9 @@
+import { authHeaders } from "./auth";
+
 export async function updateUser(email, password, profileData) {
   const response = await fetch(`${process.env.REACT_APP_API_URL}/users/me`, {
     method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ email, password, profileData }),
   });
 

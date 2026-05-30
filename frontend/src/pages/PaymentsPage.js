@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import "./PaymentsPage.css"
+import { authHeaders } from "../api/auth";
+import "./PaymentsPage.css";
 
 export default function PaymentsPage({ user }) {
   const [payments, setPayments] = useState([]);
@@ -9,17 +10,17 @@ export default function PaymentsPage({ user }) {
   useEffect(() => {
     if (!user || user.role !== "employer") {
       alert("You must be an employer to see your payments");
-      navigate("/jobs");
+      navigate("/job");
+      return;
     }
 
     async function getPayments() {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/payments/${user.id}`, { credentials: "include" });
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/payments/${user.id}`, {
+          headers: authHeaders(),
+        });
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.error || "Failed to fetch the payments");
-
-        console.log(data.payments);
         setPayments(data.payments);
       } catch (error) {
         console.error(error);
@@ -39,7 +40,7 @@ export default function PaymentsPage({ user }) {
     <div className="single-page">
       <h1>Your payments</h1>
       {payments.length === 0 ? (
-        <h2>No payement found</h2>
+        <h2>No payment found</h2>
       ) : (
         <table className="payments-table">
           <thead>
@@ -54,9 +55,9 @@ export default function PaymentsPage({ user }) {
           <tbody>
             {payments.map((p) => (
               <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>{p.job_title}</td>
                 <td>{p.freelancer_email}</td>
+                <td>{p.job_title}</td>
+                <td>{p.id}</td>
                 <td>{p.amount}€</td>
                 <td>{formatDate(p.created_at)}</td>
               </tr>

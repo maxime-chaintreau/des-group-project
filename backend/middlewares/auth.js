@@ -2,10 +2,13 @@ const jwt = require("jsonwebtoken");
 const db = require("../db");
 
 function auth(req, res, next) {
-  const jwtToken = req.cookies["jwtToken"];
+  const authHeader = req.headers["authorization"];
+  const jwtToken = authHeader && authHeader.split(" ")[1];
+
   if (!jwtToken) {
     return res.status(401).json({ error: "Not authorized" });
   }
+
   jwt.verify(jwtToken, process.env.JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(401).json({ error: "Not authorized" });
@@ -26,10 +29,11 @@ function verifyRole(requiredRole) {
     if (!req.user) {
       return res.status(401).json({ error: "Not authorized" });
     }
-
     if (req.user.role !== requiredRole) {
       return res.status(403).json({
-        error: requiredRole === "freelancer" ? "This action is restricted to freelancers only" : "This action is restricted to employers only",
+        error: requiredRole === "freelancer"
+          ? "This action is restricted to freelancers only"
+          : "This action is restricted to employers only",
       });
     }
     next();
