@@ -1,8 +1,9 @@
+import { authHeaders } from "./auth";
+
 export async function payApplication(applicationId, amount, card, stripe) {
   const res = await fetch(`${process.env.REACT_APP_API_URL}/payments/intent`, {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ applicationId, amount }),
   });
 
