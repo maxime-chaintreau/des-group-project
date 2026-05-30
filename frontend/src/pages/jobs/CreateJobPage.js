@@ -56,7 +56,6 @@ export default function CreateJobPage({ user }) {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/jobs`, {
         method: "POST",
         headers: authHeaders({ "Content-Type": "application/json" }),
-        headers: { "Content-type": "application/json" },
         body: JSON.stringify({ title: safeTitle, description: safeDescription, budget: Number(budget), tags: tagsArray }),
       });
 
