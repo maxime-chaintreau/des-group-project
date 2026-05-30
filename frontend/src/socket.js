@@ -20,18 +20,6 @@ export function connectSocket() {
     transports: ["websocket", "polling"],
   });
 
-  socket.on("connect", () => {
-    console.log("Socket connected:", socket.id);
-  });
-
-  socket.on("connect_error", (error) => {
-    console.error("Socket connect_error:", error);
-  });
-
-  socket.on("disconnect", (reason) => {
-    console.warn("Socket disconnected:", reason);
-  });
-
   return socket;
 }
 
