@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getSocket } from "../socket";
+import { connectSocket, getSocket } from "../socket";
 import "./ChatPopup.css";
 import { authHeaders } from "../api/auth";
 import { MAX_CHAT_EMAIL_LENGTH, MAX_MESSAGE_LENGTH, sanitize, validateLength } from "../utils/validation";
@@ -31,7 +31,8 @@ export default function ChatPopup({ user }) {
 
     getConversations();
 
-    const socket = getSocket();
+    let socket = getSocket();
+    if (!socket) socket = connectSocket();
     if (!socket) return;
 
     const handleMessage = (msg) => {
@@ -107,13 +108,26 @@ export default function ChatPopup({ user }) {
   function sendMessage(e) {
     e.preventDefault();
     if (newMessage.trim() === "") return;
+    if (!selectedUserId) {
+      alert("Please select a conversation before sending a message.");
+      return;
+    }
     if (!validateLength(newMessage, MAX_MESSAGE_LENGTH)) {
       alert(`Message too long (max ${MAX_MESSAGE_LENGTH})`);
       return;
     }
     const safe = sanitize(newMessage.trim());
-    const socket = getSocket();
-    socket?.emit("message:send", { recipientId: selectedUserId, content: safe });
+    const socket = getSocket() || connectSocket();
+    if (!socket) {
+      alert("Unable to send message: socket is not connected.");
+      return;
+    }
+
+    if (!socket.connected) {
+      console.warn("Socket is not connected yet. Message will be queued until connection is established.");
+    }
+
+    socket.emit("message:send", { recipientId: selectedUserId, content: safe });
     setNewMessage("");
   }
 

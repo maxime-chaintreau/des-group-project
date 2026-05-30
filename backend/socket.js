@@ -18,12 +18,8 @@ module.exports = function initSockets(server, app) {
     const authHeader = socket.handshake.auth?.token || socket.handshake.headers["authorization"];
     const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
 
-    console.log("Socket auth token received:", token ? "YES (length: " + token.length + ")" : "NO TOKEN");
-
-    if (!token) {
-      console.log("No token - disconnecting");
-      return socket.disconnect();
-    }
+    
+    if (!token) return socket.disconnect();
 
     let user;
     try {
