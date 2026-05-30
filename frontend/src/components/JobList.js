@@ -1,10 +1,12 @@
+import { authHeaders } from "../api/auth";
+
 export default function JobList({ jobs, selectedId, setJobs, user, onSelectJob }) {
   async function deleteConfirmation(jobId) {
     if (window.confirm("Do you really want to delete this job offer ?")) {
       try {
         await fetch(`${process.env.REACT_APP_API_URL}/jobs/${jobId}`, {
           method: "DELETE",
-          credentials: "include",
+          headers: authHeaders(),
         });
       } catch (error) {
         alert(error.message);
@@ -30,12 +32,9 @@ export default function JobList({ jobs, selectedId, setJobs, user, onSelectJob }
             <div role="button" key={job.id} onClick={handleClick} id="flex-space-between" className={"card" + (isSelected ? " selected" : "")} style={{ justifyContent: user ? "" : "center" }}>
               <div>
                 <h3>{job.title}</h3>
-                {job.tags &&
-                  job.tags.map((tag, idx) => (
-                    <span key={idx} className="tags">
-                      {tag.trim()}
-                    </span>
-                  ))}
+                {job.tags && job.tags.map((tag, idx) => (
+                  <span key={idx} className="tags">{tag.trim()}</span>
+                ))}
               </div>
               {userIsCreator && (
                 <div className="job-creator-div">

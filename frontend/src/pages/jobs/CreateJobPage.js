@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { authHeaders } from "../../api/auth";
 import { MAX_TITLE_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TAGS_INPUT_LENGTH, validateLength, sanitize, validatePositiveNumber } from "../../utils/validation";
 
 export default function CreateJobPage({ user }) {
@@ -54,7 +55,7 @@ export default function CreateJobPage({ user }) {
       setLoading(true);
       const res = await fetch(`${process.env.REACT_APP_API_URL}/jobs`, {
         method: "POST",
-        credentials: "include",
+        headers: authHeaders({ "Content-Type": "application/json" }),
         headers: { "Content-type": "application/json" },
         body: JSON.stringify({ title: safeTitle, description: safeDescription, budget: Number(budget), tags: tagsArray }),
       });

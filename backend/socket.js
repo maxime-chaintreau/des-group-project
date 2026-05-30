@@ -3,8 +3,12 @@ const jwt = require("jsonwebtoken");
 const db = require("./db");
 
 module.exports = function initSockets(server, app) {
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+    : ["http://localhost:3000"];
+
   const io = new Server(server, {
-    cors: { origin: "http://localhost:3000", credentials: true },
+    cors: { origin: allowedOrigins, credentials: true },
   });
 
   const userSockets = new Map();
@@ -12,14 +16,9 @@ module.exports = function initSockets(server, app) {
   app.set("userSockets", userSockets);
 
   io.on("connection", (socket) => {
-    let token;
-    if (socket.handshake.headers.cookie) {
-      token = socket.handshake.headers.cookie
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith("jwtToken="))
-        ?.split("=")[1];
-    }
+    // Read token from Authorization header (sent by socket.io client)
+    const authHeader = socket.handshake.headers["authorization"] || socket.handshake.auth?.token;
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
 
     if (!token) return socket.disconnect();
 
@@ -37,15 +36,13 @@ module.exports = function initSockets(server, app) {
 
     socket.on("message:send", async ({ recipientId, content }) => {
       try {
-        const msg = await db.one("INSERT INTO messages(sender_id, recipient_id, content) VALUES ($1,$2,$3) RETURNING id, sender_id, recipient_id, content, timestamp", [
-          socket.userId,
-          recipientId,
-          content,
-        ]);
+        const msg = await db.one(
+          "INSERT INTO messages(sender_id, recipient_id, content) VALUES ($1,$2,$3) RETURNING id, sender_id, recipient_id, content, timestamp",
+          [socket.userId, recipientId, content]
+        );
 
         const sockets = userSockets.get(recipientId);
         if (sockets) sockets.forEach((socketId) => io.to(socketId).emit("message:receive", msg));
-
         io.to(socket.id).emit("message:receive", msg);
       } catch (error) {
         console.error(error);

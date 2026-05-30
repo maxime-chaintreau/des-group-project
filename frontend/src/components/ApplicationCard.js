@@ -2,6 +2,7 @@ import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { useState, useEffect } from "react";
 import { payApplication } from "../api/stripe";
 import "./ApplicationCard.css";
+import { authHeaders } from "../api/auth";
 import { MAX_COVER_LETTER_LENGTH, validateLength, sanitize, validatePositiveNumber } from "../utils/validation";
 
 const cardStyle = {
@@ -27,7 +28,6 @@ export default function ApplicationCard({ applications, user, jobEmployerId }) {
   const [updatingStatus, setUpdatingStatus] = useState({});
   const elements = useElements();
   const stripe = useStripe();
-
   const [statuses, setStatuses] = useState({});
 
   useEffect(() => {
@@ -53,21 +53,20 @@ export default function ApplicationCard({ applications, user, jobEmployerId }) {
 
       const res = await fetch(`${process.env.REACT_APP_API_URL}/applications/${app.id}/paid`, {
         method: "PUT",
-        credentials: "include",
+        headers: authHeaders(),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      const jobRes = await fetch(`${process.env.REACT_APP_API_URL}/applications/${app.id}/jobTitle`, { credentials: "include" });
+      const jobRes = await fetch(`${process.env.REACT_APP_API_URL}/applications/${app.id}/jobTitle`, {
+        headers: authHeaders(),
+      });
       const jobData = await jobRes.json();
-
-      if (!jobRes.ok) throw new Error(data.error);
+      if (!jobRes.ok) throw new Error(jobData.error);
 
       await fetch(`${process.env.REACT_APP_API_URL}/payments`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ jobTitle: jobData.jobTitle, freelancerId: app.freelancer_id, amount: app.price }),
       });
 
@@ -82,16 +81,13 @@ export default function ApplicationCard({ applications, user, jobEmployerId }) {
 
   async function handleStatusChange(app, newStatus) {
     setUpdatingStatus((p) => ({ ...p, [app.id]: true }));
-
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/applications/${app.id}/${newStatus}`, {
         method: "PUT",
-        credentials: "include",
+        headers: authHeaders(),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-
       setStatuses((prev) => ({ ...prev, [app.id]: newStatus }));
     } catch (error) {
       alert("Error updating status: " + error.message);
@@ -102,13 +98,11 @@ export default function ApplicationCard({ applications, user, jobEmployerId }) {
 
   async function deleteConfirmation(appId) {
     if (!window.confirm("Do you really want to delete this application?")) return;
-
     try {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/applications/${appId}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: authHeaders(),
       });
-
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error);
@@ -119,28 +113,17 @@ export default function ApplicationCard({ applications, user, jobEmployerId }) {
   }
 
   async function handleEditSave(appId, newCoverLetter, newPrice) {
-    if (!newCoverLetter || !validateLength(newCoverLetter, MAX_COVER_LETTER_LENGTH)) {
-      alert("Invalid cover letter");
-      return;
-    }
-    if (!validatePositiveNumber(newPrice)) {
-      alert("Invalid price");
-      return;
-    }
-
+    if (!newCoverLetter || !validateLength(newCoverLetter, MAX_COVER_LETTER_LENGTH)) { alert("Invalid cover letter"); return; }
+    if (!validatePositiveNumber(newPrice)) { alert("Invalid price"); return; }
     try {
       const safe = sanitize(newCoverLetter.trim());
-
       const res = await fetch(`${process.env.REACT_APP_API_URL}/applications/${appId}`, {
         method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ coverLetter: safe, price: newPrice }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-
       setEditingApp({ id: null, coverLetter: "", price: 0 });
     } catch (error) {
       alert(error.message);
@@ -166,12 +149,10 @@ export default function ApplicationCard({ applications, user, jobEmployerId }) {
                       <label>Cover Letter:</label>
                       <textarea value={editingApp.coverLetter} onChange={(e) => setEditingApp((p) => ({ ...p, coverLetter: e.target.value }))} maxLength={MAX_COVER_LETTER_LENGTH} />
                     </div>
-
                     <div>
                       <label>Price:</label>
                       <input type="number" value={editingApp.price} onChange={(e) => setEditingApp((p) => ({ ...p, price: Number(e.target.value) }))} />
                     </div>
-
                     <button onClick={() => handleEditSave(app.id, editingApp.coverLetter, editingApp.price)}>Save</button>
                     <button onClick={() => setEditingApp({ id: null, coverLetter: "", price: 0 })}>Cancel</button>
                   </>
@@ -199,14 +180,12 @@ export default function ApplicationCard({ applications, user, jobEmployerId }) {
               {(isEmployer || isOwner) && (
                 <div>
                   {editingApp.id !== app.id && isOwner && statuses[app.id] !== "paid" && (
-                    <img
-                      src="https://www.svgrepo.com/show/522525/edit-2.svg"
-                      alt="edit_icon"
-                      className="icon"
-                      onClick={() => setEditingApp({ id: app.id, coverLetter: app.cover_letter, price: app.price })}
-                    />
+                    <img src="https://www.svgrepo.com/show/522525/edit-2.svg" alt="edit_icon" className="icon"
+                      onClick={() => setEditingApp({ id: app.id, coverLetter: app.cover_letter, price: app.price })} />
                   )}
-                  {statuses[app.id] !== "paid" && <img src="https://www.svgrepo.com/show/470444/trash.svg" alt="trash_icon" className="icon" onClick={() => deleteConfirmation(app.id)} />}
+                  {statuses[app.id] !== "paid" && (
+                    <img src="https://www.svgrepo.com/show/470444/trash.svg" alt="trash_icon" className="icon" onClick={() => deleteConfirmation(app.id)} />
+                  )}
                 </div>
               )}
             </div>
