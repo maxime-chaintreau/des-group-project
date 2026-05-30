@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 import { getToken } from "./api/auth";
 
-const URL = process.env.REACT_APP_SOCKET_URL || "/";
+const URL = (process.env.REACT_APP_SOCKET_URL || "/").replace(/\/+$/, "") || "/";
 
 let socket = null;
 
@@ -15,6 +15,7 @@ export function connectSocket() {
   }
 
   socket = io(URL, {
+    path: "/socket.io",
     auth: { token },
     transports: ["websocket", "polling"],
   });
