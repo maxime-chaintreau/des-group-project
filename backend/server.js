@@ -1,11 +1,11 @@
 const express = require("express");
-app.set("trust proxy", 1)
 const { createServer } = require("http");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 require("dotenv").config({ quiet: true });
 
 const app = express();
+app.set("trust proxy", 1)
 app.use(express.json());
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : ["http://localhost:3000"];
